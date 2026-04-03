@@ -1,0 +1,943 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width,initial-scale=1.0,viewport-fit=cover,maximum-scale=1.0,user-scalable=no"/>
+<meta name="mobile-web-app-capable" content="yes"/>
+<meta name="apple-mobile-web-app-capable" content="yes"/>
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent"/>
+<meta name="apple-mobile-web-app-title" content="그림일기"/>
+<meta name="theme-color" content="#1e3a8a"/>
+<link rel="manifest" href="manifest.json"/>
+<title>📷 사진 일기</title>
+<style>
+*{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent;}
+:root{
+  --blue1:#1e3a8a;--blue2:#1d6dde;--blue3:#3b82f6;--sky:#0ea5e9;
+  --grad:linear-gradient(135deg,#1e3a8a,#1d6dde,#0ea5e9);
+  --soft:linear-gradient(135deg,#eff6ff,#e0f2fe);
+  --bg:#f0f7ff;--card:#fff;--text:#0f2147;--sub:#64748b;
+  --bdr:#bfdbfe;--red:#ef4444;
+  --sat:#3b82f6;--sun:#ef4444;
+}
+html,body{height:100%;overflow:hidden;background:#60a5fa;}
+body{display:flex;justify-content:center;align-items:flex-start;}
+#app{
+  width:100%;max-width:430px;
+  height:100vh;
+  background:var(--bg);
+  display:flex;flex-direction:column;
+  overflow:hidden;
+  position:relative;
+  box-shadow:0 0 40px rgba(29,109,222,.35);
+}
+@supports(height:100dvh){#app{height:100dvh;}}
+
+/* SCREENS */
+.scr{
+  position:absolute;inset:0;
+  display:flex;flex-direction:column;
+  opacity:0;pointer-events:none;
+  background:var(--bg);
+}
+.scr.on{opacity:1;pointer-events:auto;}
+
+/* HEADER */
+.hdr{
+  background:var(--grad);
+  padding-top:env(safe-area-inset-top,0px);
+  flex-shrink:0;position:relative;overflow:hidden;
+}
+.hdr::before{content:'';position:absolute;top:-50px;right:-50px;width:160px;height:160px;background:rgba(255,255,255,.07);border-radius:50%;}
+.hdr::after{content:'';position:absolute;bottom:-30px;left:-30px;width:100px;height:100px;background:rgba(255,255,255,.05);border-radius:50%;}
+.hdr-inner{padding:16px 16px 18px;position:relative;z-index:1;}
+.hdr-row{display:flex;align-items:center;gap:10px;color:white;}
+.back{
+  background:rgba(255,255,255,.2);border:none;color:white;
+  width:36px;height:36px;border-radius:10px;font-size:18px;
+  cursor:pointer;display:flex;align-items:center;justify-content:center;
+  flex-shrink:0;
+}
+.back:active{transform:scale(.9);}
+.hdr-title{font-size:17px;font-weight:800;color:white;}
+.hdr-sub{font-size:11px;color:rgba(255,255,255,.8);margin-top:2px;}
+
+/* SCROLLABLE BODY */
+.body{
+  flex:1;overflow-y:auto;overflow-x:hidden;
+  -webkit-overflow-scrolling:touch;
+  padding-bottom:calc(env(safe-area-inset-bottom,0px) + 80px);
+}
+
+/* SMART UP TOWER LOGO */
+.logo-bar{
+  padding:12px 14px 0;position:relative;z-index:1;
+}
+.logo-box{
+  display:flex;align-items:center;justify-content:center;gap:12px;
+  width:100%;
+  background:rgba(255,255,255,0.13);
+  border:1px solid rgba(255,255,255,0.28);
+  border-radius:16px;padding:10px 18px;
+  backdrop-filter:blur(10px);
+  box-shadow:0 2px 12px rgba(0,0,0,.12);
+}
+.logo-icon{
+  width:42px;height:42px;
+  background:linear-gradient(135deg,#ffffff,#bfdbfe);
+  border-radius:11px;
+  display:flex;align-items:center;justify-content:center;
+  flex-shrink:0;box-shadow:0 2px 10px rgba(0,0,0,.2);
+  overflow:hidden;
+}
+.logo-icon svg{width:26px;height:26px;}
+.logo-text-wrap{display:flex;flex-direction:column;align-items:center;line-height:1.15;}
+.logo-name{
+  font-size:18px;font-weight:900;color:white;
+  letter-spacing:2px;text-transform:uppercase;
+  text-shadow:0 1px 8px rgba(0,0,0,.22);
+}
+.logo-sub-text{
+  font-size:10px;font-weight:600;color:rgba(255,255,255,.72);
+  letter-spacing:2.5px;text-transform:uppercase;margin-top:2px;
+}
+
+/* HOME HEADER */
+.home-top{padding:10px 16px 14px;position:relative;z-index:1;color:white;}
+.clock-row{display:flex;align-items:baseline;justify-content:center;gap:2px;}
+.clock-hm{font-size:50px;font-weight:800;letter-spacing:2px;font-variant-numeric:tabular-nums;text-shadow:0 2px 20px rgba(0,0,0,.2);line-height:1;}
+.clock-s{font-size:22px;font-weight:700;opacity:.72;font-variant-numeric:tabular-nums;margin-bottom:3px;}
+.clock-date{text-align:center;font-size:12px;opacity:.85;margin-top:6px;}
+.home-badges{display:flex;justify-content:center;gap:8px;margin-top:8px;}
+.badge{
+  background:rgba(255,255,255,.2);border:1px solid rgba(255,255,255,.25);
+  border-radius:16px;padding:3px 12px;font-size:11px;color:white;
+}
+
+/* CALENDAR */
+.cal-wrap{background:var(--card);margin-bottom:8px;box-shadow:0 2px 10px rgba(29,109,222,.07);}
+.cal-nav{display:flex;align-items:center;justify-content:space-between;padding:12px 16px 6px;}
+.cal-nav-btn{
+  background:var(--soft);border:1px solid var(--bdr);border-radius:10px;
+  width:34px;height:34px;font-size:16px;color:var(--blue2);
+  cursor:pointer;display:flex;align-items:center;justify-content:center;font-weight:700;
+}
+.cal-nav-btn:active{transform:scale(.93);}
+.cal-month{font-size:17px;font-weight:800;color:var(--text);}
+.cal-dow{display:grid;grid-template-columns:repeat(7,1fr);padding:0 8px;margin-bottom:2px;}
+.cal-dow span{text-align:center;font-size:10px;font-weight:700;padding:3px 0;color:var(--sub);}
+.cal-dow span:first-child{color:var(--sun);}
+.cal-dow span:last-child{color:var(--sat);}
+.cal-grid{display:grid;grid-template-columns:repeat(7,1fr);padding:0 8px 10px;gap:1px 0;}
+.cal-cell{
+  display:flex;flex-direction:column;align-items:center;
+  padding:2px 0;cursor:pointer;border-radius:10px;min-height:44px;justify-content:center;
+}
+.cal-cell:active{background:rgba(29,109,222,.1);}
+.cal-cell.empty{pointer-events:none;}
+.cal-num{
+  width:30px;height:30px;display:flex;align-items:center;justify-content:center;
+  font-size:14px;font-weight:600;color:var(--text);border-radius:50%;
+}
+.cal-cell.sunday .cal-num{color:var(--sun);}
+.cal-cell.saturday .cal-num{color:var(--sat);}
+.cal-cell.today .cal-num{background:var(--blue2);color:white;font-weight:800;}
+.cal-cell.selected:not(.today) .cal-num{background:var(--sky);color:white;font-weight:800;box-shadow:0 2px 8px rgba(14,165,233,.4);}
+.cal-cell.today.selected .cal-num{background:var(--blue1);box-shadow:0 2px 8px rgba(30,58,138,.4);}
+.cal-dots{display:flex;gap:3px;justify-content:center;margin-top:2px;min-height:6px;}
+.cal-dot{width:5px;height:5px;background:var(--blue2);border-radius:50%;}
+
+/* SEARCH BAR */
+.search-wrap{
+  padding:10px 12px 6px;background:var(--card);
+  border-bottom:1px solid var(--bdr);flex-shrink:0;
+}
+.search-box{
+  display:flex;align-items:center;gap:8px;
+  background:var(--soft);border-radius:14px;
+  padding:10px 14px;border:1.5px solid var(--bdr);
+  transition:border-color .2s;
+}
+.search-box:focus-within{border-color:var(--blue2);}
+.search-box svg{flex-shrink:0;}
+.search-box input{
+  flex:1;border:none;outline:none;background:transparent;
+  font-size:14px;color:var(--text);font-family:inherit;
+}
+.search-box input::placeholder{color:#93c5fd;}
+.search-clear{
+  background:#dbeafe;border:none;cursor:pointer;
+  width:22px;height:22px;border-radius:50%;
+  font-size:14px;color:var(--blue2);
+  display:flex;align-items:center;justify-content:center;flex-shrink:0;
+}
+.search-info{
+  font-size:11px;color:var(--sub);padding:4px 4px 0;
+  display:none;
+}
+mark{background:#bfdbfe;border-radius:3px;padding:0 2px;color:var(--text);}
+
+/* SECTION */
+.section-hdr{padding:10px 16px 6px;font-size:12px;font-weight:800;color:var(--blue2);letter-spacing:.8px;}
+
+/* ENTRY CARD */
+.entry-card{
+  background:var(--card);border-radius:18px;margin:0 12px 10px;
+  box-shadow:0 2px 12px rgba(29,109,222,.09);overflow:hidden;cursor:pointer;
+  transition:transform .12s;border:1px solid rgba(29,109,222,.06);
+}
+.entry-card:active{transform:scale(.985);}
+.entry-photo{width:100%;height:180px;object-fit:cover;display:block;}
+.entry-nophoto{width:100%;height:60px;background:var(--soft);display:flex;align-items:center;justify-content:center;font-size:22px;}
+.entry-body{padding:12px 14px;}
+.entry-time{font-size:11px;font-weight:700;color:var(--blue2);margin-bottom:5px;display:flex;align-items:center;gap:5px;}
+.entry-dot{width:5px;height:5px;background:var(--blue2);border-radius:50%;flex-shrink:0;}
+.entry-memo{font-size:13px;color:#374151;line-height:1.55;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden;}
+
+/* EMPTY */
+.empty{display:flex;flex-direction:column;align-items:center;padding:44px 20px;text-align:center;}
+.empty-ico{font-size:52px;margin-bottom:14px;animation:float 3s ease-in-out infinite;}
+.empty-t{font-size:16px;font-weight:700;color:var(--text);margin-bottom:6px;}
+.empty-s{font-size:12px;color:var(--sub);line-height:1.7;}
+@keyframes float{0%,100%{transform:translateY(0);}50%{transform:translateY(-8px);}}
+
+/* FAB */
+.fab{
+  position:absolute;right:20px;
+  bottom:calc(env(safe-area-inset-bottom,0px) + 20px);
+  width:58px;height:58px;background:var(--grad);
+  border-radius:50%;border:none;color:white;font-size:28px;
+  box-shadow:0 5px 24px rgba(29,109,222,.5);cursor:pointer;
+  display:flex;align-items:center;justify-content:center;z-index:50;
+}
+.fab:active{transform:scale(.9);}
+
+/* DAY BANNER */
+.day-date-banner{
+  background:var(--soft);margin:12px 12px 4px;border-radius:14px;
+  padding:10px 16px;border:1px solid var(--bdr);
+  display:flex;align-items:center;justify-content:space-between;
+}
+.day-date-text{font-size:14px;font-weight:800;color:var(--text);}
+.day-count{font-size:11px;color:var(--blue2);font-weight:700;}
+
+/* ADD FORM */
+.add-body{padding:14px 14px 0;}
+.row2{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:14px;}
+.field-card{background:var(--card);border-radius:14px;border:1.5px solid var(--bdr);overflow:hidden;}
+.field-card:focus-within{border-color:var(--blue2);}
+.field-label{padding:9px 12px 0;font-size:10px;font-weight:800;color:var(--blue2);letter-spacing:.8px;}
+.field-input{width:100%;border:none;outline:none;padding:6px 12px 10px;font-size:15px;color:var(--text);background:transparent;font-family:inherit;}
+
+/* Camera guide */
+.cam-guide{
+  background:#dbeafe;border-radius:13px;padding:10px 13px;
+  margin-bottom:13px;border:1px solid var(--bdr);
+  display:flex;align-items:flex-start;gap:9px;
+}
+.cam-guide-ico{font-size:20px;flex-shrink:0;margin-top:1px;}
+.cam-guide-txt{font-size:11px;color:#1e40af;line-height:1.6;}
+.cam-guide-txt strong{display:block;font-size:12px;font-weight:800;margin-bottom:2px;}
+
+/* Photo zone */
+.photo-zone{
+  border:2px dashed #93c5fd;border-radius:16px;
+  min-height:170px;cursor:pointer;overflow:hidden;
+  background:var(--soft);margin-bottom:12px;
+  display:flex;align-items:center;justify-content:center;
+}
+.photo-zone.has-photo{border:none;min-height:0;}
+.photo-ph{display:flex;flex-direction:column;align-items:center;padding:32px 16px;text-align:center;}
+.photo-ph-ico{font-size:44px;margin-bottom:10px;}
+.photo-ph-t{font-size:15px;font-weight:700;color:var(--blue2);margin-bottom:3px;}
+.photo-ph-s{font-size:11px;color:#60a5fa;}
+.photo-zone img{width:100%;display:block;border-radius:14px;}
+.photo-btns{display:flex;gap:8px;margin-bottom:13px;}
+.pbtn{
+  flex:1;padding:11px 4px;border:none;border-radius:12px;
+  font-size:12px;font-weight:700;cursor:pointer;
+  display:flex;align-items:center;justify-content:center;gap:5px;
+  font-family:inherit;
+}
+.pbtn:active{transform:scale(.97);}
+.pbtn-cam{background:var(--grad);color:white;flex:1.4;}
+.pbtn-gal{background:#dbeafe;color:var(--blue2);}
+.pbtn-del{background:#fee2e2;color:var(--red);}
+
+/* Memo */
+.memo-area{background:var(--card);border-radius:16px;margin-bottom:14px;border:1.5px solid var(--bdr);}
+.memo-area:focus-within{border-color:var(--blue2);}
+.memo-area textarea{
+  width:100%;min-height:140px;border:none;outline:none;
+  padding:12px 13px;font-size:14px;line-height:1.8;
+  color:var(--text);background:transparent;resize:none;
+  border-radius:14px;font-family:inherit;
+}
+.memo-area textarea::placeholder{color:#bfdbfe;}
+.memo-foot{padding:0 12px 8px;font-size:10px;color:var(--sub);text-align:right;}
+
+/* Save button */
+.save-btn{
+  width:100%;padding:16px;background:var(--grad);color:white;border:none;
+  border-radius:16px;font-size:16px;font-weight:800;cursor:pointer;
+  box-shadow:0 5px 22px rgba(29,109,222,.4);display:flex;align-items:center;
+  justify-content:center;gap:8px;font-family:inherit;margin-bottom:20px;
+}
+.save-btn:active{transform:scale(.98);}
+.save-btn:disabled{background:#bfdbfe;color:#93c5fd;box-shadow:none;cursor:not-allowed;}
+
+/* DETAIL */
+.detail-photo{width:100%;display:block;max-height:360px;object-fit:cover;}
+.detail-nophoto{padding:30px;background:var(--soft);display:flex;align-items:center;justify-content:center;font-size:52px;}
+.detail-info{margin:14px;background:var(--card);border-radius:18px;padding:16px 18px;box-shadow:0 2px 14px rgba(29,109,222,.08);}
+.detail-dt{display:flex;align-items:center;padding-bottom:14px;border-bottom:1px solid var(--bdr);margin-bottom:14px;}
+.detail-dt-left{flex:1;}
+.detail-dt-date{font-size:15px;font-weight:800;color:var(--text);}
+.detail-dt-time{font-size:12px;color:var(--sub);margin-top:3px;}
+.detail-memo-label{font-size:10px;font-weight:800;color:var(--blue2);letter-spacing:1px;text-transform:uppercase;margin-bottom:8px;}
+.detail-memo{font-size:14px;color:#1e293b;line-height:1.8;white-space:pre-wrap;}
+.detail-memo-empty{font-size:13px;color:var(--sub);font-style:italic;}
+.del-btn{
+  background:rgba(255,255,255,.2);border:none;cursor:pointer;
+  padding:8px 12px;border-radius:10px;font-size:12px;color:white;
+  font-family:inherit;display:flex;align-items:center;gap:4px;font-weight:700;
+}
+.del-btn:active{transform:scale(.95);}
+
+/* MODAL */
+.modal-ov{display:none;position:fixed;inset:0;background:rgba(0,0,0,.5);z-index:300;align-items:flex-end;justify-content:center;}
+.modal-ov.on{display:flex;}
+.modal-box{
+  background:white;border-radius:22px 22px 0 0;
+  width:100%;max-width:430px;
+  padding:20px 18px calc(env(safe-area-inset-bottom,0px) + 28px);
+  animation:slideUp .25s ease;
+}
+@keyframes slideUp{from{transform:translateY(100%);}to{transform:translateY(0);}}
+.modal-handle{width:36px;height:4px;background:#e2e8f0;border-radius:4px;margin:0 auto 16px;}
+.modal-title{font-size:16px;font-weight:800;color:var(--text);text-align:center;margin-bottom:5px;}
+.modal-sub{font-size:12px;color:var(--sub);text-align:center;margin-bottom:18px;}
+.modal-btns{display:flex;flex-direction:column;gap:8px;}
+.mbtn{padding:14px;border:none;border-radius:12px;font-size:14px;font-weight:700;cursor:pointer;font-family:inherit;}
+.mbtn:active{transform:scale(.98);}
+.mbtn-danger{background:#fee2e2;color:var(--red);}
+.mbtn-cancel{background:#f1f5f9;color:#64748b;}
+
+/* TOAST */
+.toast{
+  position:fixed;top:calc(env(safe-area-inset-top,0px) + 60px);
+  left:50%;transform:translateX(-50%) translateY(-16px);
+  background:#0f172a;color:white;padding:10px 20px;
+  border-radius:18px;font-size:12px;font-weight:600;
+  z-index:400;opacity:0;transition:all .25s;pointer-events:none;
+  white-space:nowrap;box-shadow:0 4px 16px rgba(0,0,0,.2);
+}
+.toast.on{opacity:1;transform:translateX(-50%) translateY(0);}
+::-webkit-scrollbar{width:0;}
+</style>
+</head>
+<body>
+<div id="app">
+
+<!-- ========== HOME ========== -->
+<div class="scr on" id="S-home">
+  <div class="hdr">
+    <div class="logo-bar">
+      <div class="logo-box">
+        <div class="logo-icon">
+          <!-- Building / Tower icon -->
+          <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+            <rect x="7" y="3" width="10" height="18" rx="1" fill="#1e3a8a" opacity="0.9"/>
+            <rect x="4" y="8" width="5" height="13" rx="1" fill="#1d6dde" opacity="0.85"/>
+            <rect x="15" y="8" width="5" height="13" rx="1" fill="#1d6dde" opacity="0.85"/>
+            <rect x="9" y="5" width="2" height="2" rx=".4" fill="white" opacity=".8"/>
+            <rect x="13" y="5" width="2" height="2" rx=".4" fill="white" opacity=".8"/>
+            <rect x="9" y="9" width="2" height="2" rx=".4" fill="white" opacity=".8"/>
+            <rect x="13" y="9" width="2" height="2" rx=".4" fill="white" opacity=".8"/>
+            <rect x="9" y="13" width="2" height="2" rx=".4" fill="white" opacity=".8"/>
+            <rect x="13" y="13" width="2" height="2" rx=".4" fill="white" opacity=".8"/>
+            <rect x="11" y="17" width="2" height="4" rx=".3" fill="white" opacity=".9"/>
+          </svg>
+        </div>
+        <div class="logo-text-wrap">
+          <span class="logo-name">Smart Up Tower</span>
+          <span class="logo-sub-text">사진 일기 · Photo Diary</span>
+        </div>
+      </div>
+    </div>
+    <div class="home-top">
+      <div class="clock-row">
+        <span class="clock-hm" id="C-hm">00:00</span>
+        <span class="clock-s" id="C-s">:00</span>
+      </div>
+      <div class="clock-date" id="C-date">날짜 로딩중...</div>
+      <div class="home-badges">
+        <span class="badge" id="H-total">📝 총 0개</span>
+        <span class="badge" id="H-today">오늘 0개</span>
+      </div>
+    </div>
+  </div>
+  <!-- 검색바 -->
+  <div class="search-wrap">
+    <div class="search-box">
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none">
+        <circle cx="11" cy="11" r="7" stroke="#3b82f6" stroke-width="2"/>
+        <path d="M16.5 16.5L21 21" stroke="#3b82f6" stroke-width="2" stroke-linecap="round"/>
+      </svg>
+      <input id="srch-input" type="text" placeholder="단어로 일기 검색..." autocomplete="off"/>
+      <button class="search-clear" id="srch-clear" style="display:none">×</button>
+    </div>
+    <div class="search-info" id="srch-info"></div>
+  </div>
+
+  <div class="body" id="home-body">
+    <!-- 달력 (검색 중엔 숨김) -->
+    <div id="cal-section">
+      <div class="cal-wrap">
+        <div class="cal-nav">
+          <button class="cal-nav-btn" id="cal-prev">‹</button>
+          <span class="cal-month" id="cal-month-title">2026년 4월</span>
+          <button class="cal-nav-btn" id="cal-next">›</button>
+        </div>
+        <div class="cal-dow">
+          <span style="color:var(--sun)">일</span><span>월</span><span>화</span>
+          <span>수</span><span>목</span><span>금</span>
+          <span style="color:var(--sat)">토</span>
+        </div>
+        <div class="cal-grid" id="cal-grid"></div>
+      </div>
+    </div>
+    <div class="section-hdr" id="home-section-label">📅 오늘의 일기</div>
+    <div id="home-entries"></div>
+  </div>
+  <button class="fab" id="fab-home">＋</button>
+</div>
+
+<!-- ========== DAY VIEW ========== -->
+<div class="scr" id="S-day">
+  <div class="hdr">
+    <div class="hdr-inner">
+      <div class="hdr-row">
+        <button class="back" id="day-back">←</button>
+        <div>
+          <div class="hdr-title" id="day-title">날짜 일기</div>
+          <div class="hdr-sub" id="day-sub"></div>
+        </div>
+      </div>
+    </div>
+  </div>
+  <div class="body" id="day-entries-body"></div>
+  <button class="fab" id="fab-day">＋</button>
+</div>
+
+<!-- ========== ADD ========== -->
+<div class="scr" id="S-add">
+  <div class="hdr">
+    <div class="hdr-inner">
+      <div class="hdr-row">
+        <button class="back" id="add-back">←</button>
+        <div>
+          <div class="hdr-title">✏️ 일기 작성</div>
+          <div class="hdr-sub" id="add-hdr-sub">날짜와 시간을 선택하세요</div>
+        </div>
+      </div>
+    </div>
+  </div>
+  <div class="body add-body">
+    <div class="row2">
+      <div class="field-card">
+        <div class="field-label">📅 날짜 선택</div>
+        <input type="date" class="field-input" id="add-date"/>
+      </div>
+      <div class="field-card">
+        <div class="field-label">⏰ 시간</div>
+        <input type="time" class="field-input" id="add-time"/>
+      </div>
+    </div>
+    <div class="cam-guide">
+      <div class="cam-guide-ico">📲</div>
+      <div class="cam-guide-txt">
+        <strong>📷 사진 촬영 방법</strong>
+        아래 <b>카메라 촬영</b> 버튼 → 스마트폰 카메라 바로 실행<br>
+        <b>갤러리</b> 버튼 → 앨범에서 기존 사진 선택
+      </div>
+    </div>
+    <div class="photo-zone" id="photo-zone" onclick="document.getElementById('cam-in').click()">
+      <div class="photo-ph" id="photo-ph">
+        <div class="photo-ph-ico">📷</div>
+        <div class="photo-ph-t">탭하여 카메라 실행</div>
+        <div class="photo-ph-s">스마트폰에서 카메라가 바로 열려요</div>
+      </div>
+      <img id="photo-prev" style="display:none"/>
+    </div>
+    <input type="file" id="cam-in" accept="image/*" capture="environment" style="display:none"/>
+    <input type="file" id="gal-in" accept="image/*" style="display:none"/>
+    <div class="photo-btns" id="pb-new">
+      <button class="pbtn pbtn-cam" onclick="document.getElementById('cam-in').click()">📷 카메라 촬영</button>
+      <button class="pbtn pbtn-gal" onclick="document.getElementById('gal-in').click()">🖼 갤러리</button>
+    </div>
+    <div class="photo-btns" id="pb-change" style="display:none">
+      <button class="pbtn pbtn-gal" onclick="document.getElementById('gal-in').click()">🔄 사진 변경</button>
+      <button class="pbtn pbtn-del" id="ph-remove">🗑 삭제</button>
+    </div>
+    <div class="memo-area">
+      <div class="field-label" style="padding:10px 13px 0">✍️ 메모</div>
+      <textarea id="memo-in" placeholder="오늘의 이야기를 자유롭게 적어보세요...&#10;글자 수 제한 없이 원하는 만큼 작성 가능 📝"></textarea>
+      <div class="memo-foot"><span id="memo-cnt">0</span>자 입력됨</div>
+    </div>
+    <button class="save-btn" id="save-btn" disabled>💾 일기 저장하기</button>
+  </div>
+</div>
+
+<!-- ========== DETAIL ========== -->
+<div class="scr" id="S-detail">
+  <div class="hdr">
+    <div class="hdr-inner">
+      <div class="hdr-row" style="justify-content:space-between">
+        <div style="display:flex;align-items:center;gap:10px">
+          <button class="back" id="det-back">←</button>
+          <span class="hdr-title">📖 일기 보기</span>
+        </div>
+        <button class="del-btn" id="del-btn">🗑 삭제</button>
+      </div>
+    </div>
+  </div>
+  <div class="body" id="det-body"></div>
+</div>
+
+</div><!-- /app -->
+
+<div class="modal-ov" id="del-modal">
+  <div class="modal-box">
+    <div class="modal-handle"></div>
+    <div class="modal-title">일기를 삭제할까요?</div>
+    <div class="modal-sub">삭제된 일기는 복구할 수 없어요 😢</div>
+    <div class="modal-btns">
+      <button class="mbtn mbtn-danger" id="del-confirm">🗑 삭제하기</button>
+      <button class="mbtn mbtn-cancel" id="del-cancel">취소</button>
+    </div>
+  </div>
+</div>
+<div class="toast" id="toast"></div>
+
+<script>
+var entries=[];
+var curId=null,newPh=null,addFromDay=false;
+var idb=null;
+var DB_NAME='sut_diary_db', DB_VER=1, STORE='diary';
+
+// ====== IndexedDB (대용량 저장 - 사진 포함 수백MB 지원) ======
+function initDB(callback){
+  var req=indexedDB.open(DB_NAME, DB_VER);
+  req.onupgradeneeded=function(e){
+    var d=e.target.result;
+    if(!d.objectStoreNames.contains(STORE)){
+      d.createObjectStore(STORE,{keyPath:'id'});
+    }
+  };
+  req.onsuccess=function(e){
+    idb=e.target.result;
+    callback();
+  };
+  req.onerror=function(){
+    idb=null;
+    callback();
+  };
+}
+
+function saveData(){
+  if(!idb){toast('❌ DB 오류: 브라우저를 다시 시작해주세요');return;}
+  var tx=idb.transaction(STORE,'readwrite');
+  var store=tx.objectStore(STORE);
+  store.clear();
+  entries.forEach(function(e){
+    store.put({id:e.id,photo:e.photo||null,memo:e.memo||'',date:e.date.toISOString(),hasPhoto:!!e.photo});
+  });
+  tx.oncomplete=function(){/* 저장 완료 */};
+  tx.onerror=function(){toast('❌ 저장 실패. 다시 시도해주세요.');};
+}
+
+function loadData(callback){
+  if(!idb){callback();return;}
+  var tx=idb.transaction(STORE,'readonly');
+  var store=tx.objectStore(STORE);
+  var req=store.getAll();
+  req.onsuccess=function(e){
+    var rows=e.target.result||[];
+    if(rows.length>0){
+      entries=rows.map(function(r){
+        return {id:r.id,photo:r.photo||null,memo:r.memo||'',date:new Date(r.date),hasPhoto:r.hasPhoto||false};
+      });
+      entries.sort(function(a,b){return b.date-a.date;});
+    } else {
+      entries=[{id:Date.now(),photo:null,memo:'사진 일기 앱 시작! 🎉\n달력의 날짜를 터치하면 그날의 일기를 볼 수 있어요.\n\n+ 버튼을 눌러 첫 번째 일기를 작성해보세요 📷',date:new Date(),hasPhoto:false}];
+      saveData();
+    }
+    callback();
+  };
+  req.onerror=function(){entries=[];callback();};
+}
+var calY=new Date().getFullYear(),calM=new Date().getMonth();
+var selDate=new Date();
+var DAYS=['일','월','화','수','목','금','토'];
+
+// 사진 없을 때 표시할 카메라 아이콘 HTML
+var NO_PHOTO_HTML='<div style="display:flex;flex-direction:column;align-items:center;justify-content:center;width:100%;height:70px;background:linear-gradient(135deg,#eff6ff,#e0f2fe);gap:4px;">'+
+  '<svg width="28" height="28" viewBox="0 0 24 24" fill="none"><path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z" stroke="#93c5fd" stroke-width="1.5" fill="none"/><circle cx="12" cy="13" r="4" stroke="#93c5fd" stroke-width="1.5" fill="none"/></svg>'+
+  '<span style="font-size:10px;color:#93c5fd;font-weight:600">사진 없음</span></div>';
+
+var NO_PHOTO_DETAIL='<div style="display:flex;flex-direction:column;align-items:center;justify-content:center;padding:36px;background:linear-gradient(135deg,#eff6ff,#e0f2fe);gap:10px;">'+
+  '<svg width="52" height="52" viewBox="0 0 24 24" fill="none"><path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z" stroke="#93c5fd" stroke-width="1.2" fill="none"/><circle cx="12" cy="13" r="4" stroke="#93c5fd" stroke-width="1.2" fill="none"/></svg>'+
+  '<span style="font-size:13px;color:#93c5fd;font-weight:600">사진 없음</span></div>';
+
+function p2(n){return String(n).padStart(2,'0');}
+function set(id,v){var e=document.getElementById(id);if(e)e.textContent=v;}
+function dateKey(d){return d.getFullYear()+'-'+p2(d.getMonth()+1)+'-'+p2(d.getDate());}
+function fmtDate(d){return d.getFullYear()+'년 '+(d.getMonth()+1)+'월 '+d.getDate()+'일 ('+DAYS[d.getDay()]+')';}
+function fmtTime(d){return p2(d.getHours())+':'+p2(d.getMinutes())+':'+p2(d.getSeconds());}
+function fmtTimeS(d){return p2(d.getHours())+':'+p2(d.getMinutes());}
+function escH(s){return s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');}
+
+// Clock
+function updateClock(){
+  var n=new Date();
+  set('C-hm',p2(n.getHours())+':'+p2(n.getMinutes()));
+  set('C-s',':'+p2(n.getSeconds()));
+  set('C-date',n.getFullYear()+'년 '+(n.getMonth()+1)+'월 '+n.getDate()+'일 ('+DAYS[n.getDay()]+')');
+  var at=document.getElementById('add-time');
+  if(at&&document.activeElement!==at&&!at.dataset.manual){
+    at.value=p2(n.getHours())+':'+p2(n.getMinutes());
+  }
+}
+setInterval(updateClock,1000);
+updateClock();
+
+// Screen navigation
+function go(name){
+  document.querySelectorAll('.scr').forEach(function(s){s.classList.remove('on');});
+  var s=document.getElementById('S-'+name);
+  s.classList.add('on');
+  var b=s.querySelector('.body');
+  if(b)b.scrollTop=0;
+}
+
+// Calendar
+function renderCal(){
+  set('cal-month-title',calY+'년 '+(calM+1)+'월');
+  var firstDow=new Date(calY,calM,1).getDay();
+  var daysInM=new Date(calY,calM+1,0).getDate();
+  var today=new Date();
+  var todayKey=dateKey(today);
+  var selKey=dateKey(selDate);
+  var cnts={};
+  entries.forEach(function(e){var k=dateKey(e.date);cnts[k]=(cnts[k]||0)+1;});
+  var html='';
+  for(var i=0;i<firstDow;i++) html+='<div class="cal-cell empty"></div>';
+  for(var d=1;d<=daysInM;d++){
+    var dow=(firstDow+d-1)%7;
+    var k=calY+'-'+p2(calM+1)+'-'+p2(d);
+    var cls='cal-cell'+(dow===0?' sunday':'')+(dow===6?' saturday':'')+(k===todayKey?' today':'')+(k===selKey?' selected':'');
+    var cnt=cnts[k]||0;
+    var dots='';
+    for(var x=0;x<Math.min(cnt,3);x++) dots+='<span class="cal-dot"></span>';
+    html+='<div class="'+cls+'" onclick="tapDay('+calY+','+calM+','+d+')"><span class="cal-num">'+d+'</span><span class="cal-dots">'+dots+'</span></div>';
+  }
+  document.getElementById('cal-grid').innerHTML=html;
+  renderHomeSection();
+  var todayCnt=entries.filter(function(e){return dateKey(e.date)===todayKey;}).length;
+  set('H-total','📝 총 '+entries.length+'개');
+  set('H-today','오늘 '+todayCnt+'개');
+}
+
+function tapDay(y,m,d){
+  selDate=new Date(y,m,d);
+  calY=y;calM=m;
+  renderCal();
+  openDay(selDate);
+}
+
+function renderHomeSection(){
+  var selKey=dateKey(selDate);
+  var todayKey=dateKey(new Date());
+  var isToday=selKey===todayKey;
+  set('home-section-label','📅 '+(isToday?'오늘의 일기':fmtDate(selDate)+' 일기'));
+  var list=entries.filter(function(e){return dateKey(e.date)===selKey;});
+  var c=document.getElementById('home-entries');
+  if(list.length===0){
+    c.innerHTML='<div class="empty"><div class="empty-ico">📷</div><div class="empty-t">'+(isToday?'오늘 일기가 없어요':'이날 일기가 없어요')+'</div><div class="empty-s">아래 + 버튼을 눌러 새 일기를 작성해보세요</div></div>';
+  } else {
+    c.innerHTML=list.map(entryCardHTML).join('');
+  }
+}
+
+// Day view
+function openDay(date){
+  var k=dateKey(date);
+  set('day-title',fmtDate(date));
+  var cnt=entries.filter(function(e){return dateKey(e.date)===k;}).length;
+  set('day-sub','일기 '+cnt+'개');
+  renderDayEntries(date);
+  go('day');
+}
+function renderDayEntries(date){
+  var k=dateKey(date);
+  var list=entries.filter(function(e){return dateKey(e.date)===k;});
+  var cnt=list.length;
+  var banner='<div class="day-date-banner"><span class="day-date-text">'+fmtDate(date)+'</span><span class="day-count">일기 '+cnt+'개</span></div>';
+  var c=document.getElementById('day-entries-body');
+  if(cnt===0){
+    c.innerHTML=banner+'<div class="empty"><div class="empty-ico">📷</div><div class="empty-t">이날 일기가 없어요</div><div class="empty-s">+ 버튼으로 이 날짜에<br>새 일기를 추가해보세요</div></div>';
+  } else {
+    var cards=list.map(function(e){return '<div style="margin:0 12px 10px">'+entryCardInner(e)+'</div>';}).join('');
+    c.innerHTML=banner+'<div style="padding:8px 0 0">'+cards+'</div>';
+  }
+}
+function entryCardHTML(e){
+  return '<div class="entry-card" onclick="openDetail('+e.id+')">'+
+    (e.photo?'<img class="entry-photo" src="'+e.photo+'" loading="lazy"/>':NO_PHOTO_HTML)+
+    '<div class="entry-body"><div class="entry-time"><span class="entry-dot"></span>'+fmtDate(e.date)+' '+fmtTimeS(e.date)+'</div>'+
+    '<div class="entry-memo">'+(e.memo?escH(e.memo):'<span style="color:#94a3b8;font-style:italic">메모 없음</span>')+'</div></div></div>';
+}
+function entryCardInner(e){return entryCardHTML(e);}
+
+// Open add
+function openAdd(date){
+  newPh=null;
+  var prev=document.getElementById('photo-prev');
+  prev.style.display='none';prev.src='';
+  document.getElementById('photo-ph').style.display='flex';
+  document.getElementById('photo-zone').classList.remove('has-photo');
+  document.getElementById('pb-new').style.display='flex';
+  document.getElementById('pb-change').style.display='none';
+  document.getElementById('memo-in').value='';
+  document.getElementById('memo-cnt').textContent='0';
+  document.getElementById('save-btn').disabled=true;
+  var d=date||new Date();
+  document.getElementById('add-date').value=dateKey(d);
+  var n=new Date();
+  var at=document.getElementById('add-time');
+  at.value=p2(n.getHours())+':'+p2(n.getMinutes());
+  at.dataset.manual='';
+  go('add');
+}
+
+// Open detail
+function openDetail(id){
+  var e=entries.find(function(x){return x.id===id;});
+  if(!e)return;
+  curId=id;
+  document.getElementById('det-body').innerHTML=
+    (e.photo?'<img class="detail-photo" src="'+e.photo+'"/>':NO_PHOTO_DETAIL)+
+    '<div class="detail-info">'+
+    '<div class="detail-dt"><div class="detail-dt-left"><div class="detail-dt-date">📅 '+fmtDate(e.date)+'</div>'+
+    '<div class="detail-dt-time">⏰ '+fmtTime(e.date)+'</div></div>'+
+    '<div style="font-size:24px">📖</div></div>'+
+    '<div class="detail-memo-label">✍️ 메모</div>'+
+    (e.memo?'<div class="detail-memo">'+escH(e.memo)+'</div>':'<div class="detail-memo-empty">메모가 없어요</div>')+
+    '</div>';
+  go('detail');
+}
+
+// ====== 검색 기능 ======
+var srchQuery='';
+
+function doSearch(q){
+  srchQuery=q.trim();
+  var infoEl=document.getElementById('srch-info');
+  var calSec=document.getElementById('cal-section');
+  var secLbl=document.getElementById('home-section-label');
+  var container=document.getElementById('home-entries');
+  var clearBtn=document.getElementById('srch-clear');
+
+  clearBtn.style.display=srchQuery?'flex':'none';
+
+  if(!srchQuery){
+    // 검색어 없으면 달력 + 날짜별 일기로 복귀
+    calSec.style.display='';
+    infoEl.style.display='none';
+    renderCal();
+    return;
+  }
+
+  // 달력 숨기고 검색 결과만 표시
+  calSec.style.display='none';
+
+  var pat=srchQuery.replace(/[.*+?^${}()|[\]\\]/g,'\\$&');
+  // 검색어 포함 여부 체크 (i 플래그만, g 없이 → lastIndex 문제 없음)
+  var reTest=new RegExp(pat,'i');
+  var results=entries.filter(function(e){return e.memo&&reTest.test(e.memo);});
+  results.sort(function(a,b){return b.date-a.date;});
+
+  infoEl.style.display='block';
+  infoEl.textContent='"'+srchQuery+'" 검색 결과: '+results.length+'개';
+  secLbl.textContent='🔍 검색 결과';
+
+  if(results.length===0){
+    container.innerHTML='<div class="empty"><div class="empty-ico">🔍</div>'+
+      '<div class="empty-t">검색 결과가 없어요</div>'+
+      '<div class="empty-s">"'+escH(srchQuery)+'"와 일치하는 일기가 없어요.<br>다른 단어로 검색해보세요.</div></div>';
+  } else {
+    container.innerHTML=results.map(function(e){
+      // 매번 새 regex 생성 (gi, lastIndex 초기화)
+      var reHL=new RegExp(pat,'gi');
+      var memoHL=e.memo?e.memo.replace(reHL,function(m){return '<mark>'+escH(m)+'</mark>';}):'';
+      return '<div class="entry-card" onclick="openDetail('+e.id+')">'+
+        (e.photo?'<img class="entry-photo" src="'+e.photo+'" loading="lazy"/>':NO_PHOTO_HTML)+
+        '<div class="entry-body">'+
+        '<div class="entry-time"><span class="entry-dot"></span>'+fmtDate(e.date)+' '+fmtTimeS(e.date)+'</div>'+
+        '<div class="entry-memo">'+(memoHL||'<span style="color:#94a3b8;font-style:italic">메모 없음</span>')+'</div>'+
+        '</div></div>';
+    }).join('');
+  }
+}
+
+document.getElementById('srch-input').addEventListener('input',function(){
+  doSearch(this.value);
+});
+document.getElementById('srch-clear').onclick=function(){
+  document.getElementById('srch-input').value='';
+  doSearch('');
+};
+
+// Events
+document.getElementById('cal-prev').onclick=function(){calM--;if(calM<0){calM=11;calY--;}renderCal();};
+document.getElementById('cal-next').onclick=function(){calM++;if(calM>11){calM=0;calY++;}renderCal();};
+document.getElementById('fab-home').onclick=function(){addFromDay=false;openAdd(selDate);};
+document.getElementById('day-back').onclick=function(){go('home');};
+document.getElementById('fab-day').onclick=function(){addFromDay=true;openAdd(selDate);};
+document.getElementById('add-back').onclick=function(){addFromDay?go('day'):go('home');};
+document.getElementById('det-back').onclick=function(){go('day');};
+document.getElementById('add-time').addEventListener('change',function(){this.dataset.manual='1';});
+
+// 사진 압축 함수 (저장 용량 절약 - 최대 900px, 품질 0.75)
+function compressImage(dataUrl, callback){
+  var img=new Image();
+  img.onload=function(){
+    var maxW=900, maxH=900;
+    var w=img.width, h=img.height;
+    if(w>maxW){h=Math.round(h*maxW/w);w=maxW;}
+    if(h>maxH){w=Math.round(w*maxH/h);h=maxH;}
+    var canvas=document.createElement('canvas');
+    canvas.width=w; canvas.height=h;
+    var ctx=canvas.getContext('2d');
+    ctx.drawImage(img,0,0,w,h);
+    callback(canvas.toDataURL('image/jpeg',0.75));
+  };
+  img.src=dataUrl;
+}
+
+// Photo handlers
+document.getElementById('cam-in').addEventListener('change',handleFile);
+document.getElementById('gal-in').addEventListener('change',handleFile);
+function handleFile(e){
+  var file=e.target.files[0];e.target.value='';
+  if(!file)return;
+  var r=new FileReader();
+  r.onload=function(ev){
+    compressImage(ev.target.result, function(compressed){
+      newPh=compressed;
+      var prev=document.getElementById('photo-prev');
+      prev.src=newPh;prev.style.display='block';
+      document.getElementById('photo-ph').style.display='none';
+      document.getElementById('photo-zone').classList.add('has-photo');
+      document.getElementById('pb-new').style.display='none';
+      document.getElementById('pb-change').style.display='flex';
+      checkReady();
+    });
+  };
+  r.readAsDataURL(file);
+}
+document.getElementById('ph-remove').onclick=function(e){
+  e.stopPropagation();newPh=null;
+  var prev=document.getElementById('photo-prev');
+  prev.style.display='none';prev.src='';
+  document.getElementById('photo-ph').style.display='flex';
+  document.getElementById('photo-zone').classList.remove('has-photo');
+  document.getElementById('pb-new').style.display='flex';
+  document.getElementById('pb-change').style.display='none';
+  checkReady();
+};
+document.getElementById('memo-in').addEventListener('input',function(){
+  document.getElementById('memo-cnt').textContent=this.value.length.toLocaleString();
+  checkReady();
+});
+function checkReady(){
+  document.getElementById('save-btn').disabled=!(newPh||document.getElementById('memo-in').value.trim().length>0);
+}
+
+// Save
+document.getElementById('save-btn').onclick=function(){
+  var memo=document.getElementById('memo-in').value.trim();
+  if(!newPh&&!memo)return;
+  var dv=document.getElementById('add-date').value;
+  var tv=document.getElementById('add-time').value||p2(new Date().getHours())+':'+p2(new Date().getMinutes());
+  var dp=dv.split('-').map(Number);
+  var tp=tv.split(':').map(Number);
+  var date=new Date(dp[0],dp[1]-1,dp[2],tp[0],tp[1],new Date().getSeconds());
+  entries.unshift({id:Date.now(),photo:newPh,memo:memo,date:date,hasPhoto:!!newPh});
+  entries.sort(function(a,b){return b.date-a.date;});
+  saveData();
+  selDate=date;calY=date.getFullYear();calM=date.getMonth();
+  renderCal();
+  // 검색 중이었다면 결과 갱신
+  if(srchQuery) doSearch(srchQuery);
+  if(addFromDay){
+    var k=dateKey(selDate);
+    set('day-sub','일기 '+entries.filter(function(e){return dateKey(e.date)===k;}).length+'개');
+    renderDayEntries(selDate);
+    go('day');
+  } else {
+    go('home');
+  }
+  toast('✅ 일기가 저장되었어요!');
+};
+
+// Delete
+document.getElementById('del-btn').onclick=function(){document.getElementById('del-modal').classList.add('on');};
+document.getElementById('del-cancel').onclick=function(){document.getElementById('del-modal').classList.remove('on');};
+document.getElementById('del-confirm').onclick=function(){
+  entries=entries.filter(function(e){return e.id!==curId;});
+  saveData();
+  document.getElementById('del-modal').classList.remove('on');
+  renderCal();
+  var k=dateKey(selDate);
+  set('day-sub','일기 '+entries.filter(function(e){return dateKey(e.date)===k;}).length+'개');
+  renderDayEntries(selDate);
+  go('day');
+  toast('🗑 일기가 삭제되었어요');
+};
+document.getElementById('del-modal').onclick=function(e){
+  if(e.target===document.getElementById('del-modal')) document.getElementById('del-modal').classList.remove('on');
+};
+
+// Toast
+var tTimer;
+function toast(msg){
+  var t=document.getElementById('toast');
+  t.textContent=msg;t.classList.add('on');
+  clearTimeout(tTimer);tTimer=setTimeout(function(){t.classList.remove('on');},2500);
+}
+
+// Init — IndexedDB 열고 나서 데이터 로드
+initDB(function(){
+  loadData(function(){
+    selDate=new Date();
+    renderCal();
+  });
+});
+
+// ====== Service Worker 등록 (오프라인 설치 지원) ======
+if('serviceWorker' in navigator){
+  window.addEventListener('load', function(){
+    navigator.serviceWorker.register('./sw.js')
+      .then(function(reg){
+        console.log('[그림일기] 오프라인 지원 활성화 ✅', reg.scope);
+      })
+      .catch(function(err){
+        console.log('[그림일기] 서비스워커 등록 실패 (로컬파일 환경에서는 정상)', err);
+      });
+  });
+}
+</script>
+</body>
+</html>
